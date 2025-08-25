@@ -1,11 +1,11 @@
-<h1>Como extrair o "codigo fonte" de uma imagem do OCI Function</h1>
+<h1>Como extrair o "codigo fonte" de uma OCI Function</h1>
 
 Este procedimento foi elaborado com o objetivo de extrair os arquivos usados para a construção de uma OCI Function. Ele pode ser útil em casos onde é necessário alterar o código/script que está em execução e os arquivos originais não estão mais disponíveis.
 
 ## Isenção de responsabilidade
-Antes de continuar, esteja ciente de que a utilização de qualquer script, código ou comando contido neste repositório é de sua total responsabilidade. Os autores do conteúdo não assumem qualquer responsabilidade ou ônus decorrentes do seu uso.
+Antes de continuar, esteja ciente de que a utilização de qualquer script, código ou comando contido neste repositório é de **sua total responsabilidade**. Os autores do conteúdo não assumem qualquer responsabilidade ou ônus decorrentes do seu uso.
 
-Recomenda-se testar todo o conteúdo em um ambiente de teste apropriado e integrar os scripts de automação a uma infraestrutura de monitoramento. Isso permitirá que você acompanhe o funcionamento do processo e mitigue eventuais falhas que possam ocorrer.
+Recomenda-se testar todo o conteúdo em um ambiente de teste apropriado e integrar os scripts/codigos a uma infraestrutura de monitoramento. Isso permitirá que você acompanhe o funcionamento do processo e mitigue eventuais falhas que possam ocorrer.
 
 Este **não é um aplicativo oficial da Oracle** e, por isso, não conta com o suporte da empresa. 
 **A Oracle não se responsabiliza por nenhum conteúdo aqui presente.**
@@ -24,15 +24,15 @@ Este **não é um aplicativo oficial da Oracle** e, por isso, não conta com o s
 - [Docker](#docker)
   - [Login](#login)
   - [Download](#download)
-  - [Copy](#copy)
-  - [Remover a imagem local do docker](#remover-a-imagem-local-do-docker)
+  - [File Export](#file-export)
+  - [Limpeza do ambiente](#limpeza-do-ambiente)
 
 # Pré-requisitos:
 - Auth Token (para autenticação no OCI Registry) [**obrigatório**]
 - Function (operacional e configurada) [**obrigatório**]
 - Sistema Linux ou Cloud Shell [**obrigatório**]
 - Comando Docker [**obrigatório**]
-- oci cli (instalado e configurado) [**opcional**]
+- oci cli (instalado e configurado) [**obrigatório**]
 
 # Auth Token
 
@@ -40,21 +40,18 @@ Para fazer o login no OCI Registry, é necessário utilizar um **Auth Token**. E
 
 ## OCI Console
 
-Após efetuar o login em sua conta na OCI, navegue até as configurações do seu perfil na Console: **User Menu** > **User settings**
+<h3>Se voce ja possui um <b>Auth Token</b> e deseja utiliza-lo, pode pular para o proximo passo: <a href="#function-image">Function (image)</a></h3> 
 
-<img src="images/oci-user-perfil.jpg" alt="Perfil do usuario" width="70%" height="70%"/>
+Após efetuar o login em sua conta na OCI:
+1. Navegue até as configurações do seu perfil na Console: **User Menu** > **User settings**
+2. Na tela do perfil do usuário, acesse a aba "**Tokens and keys**" e role a página para baixo até a seção de "**Auth tokens**".
+3. Clique no botão "**Generate token**". Preencha a descrição do token e confirme a criação no botão localizado no canto inferior direito.
+4. Com o "**Auth Token**" criado, utiliza o menu de ações [...] para copiar a hash de autenticação.
+5. Agora é so fechar a janela clicando no botão "Close".
 
-Na tela do perfil do usuário, acesse a aba "**Tokens and keys**" e role a página para baixo até a seção de "**Auth tokens**".
+Observacao: A hash de autenticação do **Generate token**, so pode ser consultado no momento da criação.
 
-<img src="images/oci-user-auth-token.jpg" alt="Perfil do usuario: Auth Token" width="70%" height="70%"/>
-
-Para criar o *Auth Token*, clique no botão "**Generate token**". Preencha a descrição do token e confirme a criação no botão localizado no canto inferior direito.
-
-<img src="images/oci-user-generate-token.jpg" alt="Perfil do usuario: Generate Token" width="70%" height="70%"/>
-
-Para criar o Auth Token, clique no botão "Generate token". Preencha a descrição do token e confirme a criação no botão localizado no canto inferior direito.
-
-<img src="images/oci-user-generate-token-copy-token.jpg" alt="Perfil do usuario: Show Token" width="70%" height="70%"/>
+<img src="images/oci-user-generate-auth-token.gif" alt="Perfil do usuario"/> 
 
 ## Command line
 
@@ -65,15 +62,15 @@ oci iam user list --all \
 --query 'data[*].{Name: name, OCID: id}'
 ```
 
-**EXEMPLO**:
+**OUTPUT EXAMPLE**:
 ```JSON
 [
   {
-    "Name": "User Sample 001",
+    "Name": "user1.name@domain.mail",
     "OCID": "ocid1.user.oc1..aaaaaaaai______i6o4"
   },
   {
-    "Name": "User Sample 001",
+    "Name": "user2.name@domain.mail",
     "OCID": "ocid1.user.oc1..aaaaaaaan______i6o4"
   }
 ]
@@ -88,7 +85,7 @@ oci iam auth-token create \
 --query 'data.{Name: description, Auth_Token: token}'
 ```
 
-**EXEMPLO**
+**OUTPUT EXAMPLE**
 ```JSON
 {
   "Name": "OCI Registry",
@@ -98,27 +95,24 @@ oci iam auth-token create \
 
 # Function (image)
 
-Para obter a URL da imagem utilizada na execução da function, consulte-a via **Command Line** ou **OCI Console**.
+Para obter a URL da imagem utilizada na execução da function, consulte-a via **OCI Console** ou **Command Line**.
 
 ## OCI Console
 
-Após efetuar o login na sua conta OCI, navegue pelo menu da Console para: **Menu** > **Developer Service** > **Functions** > **Applications**
+Após efetuar o login em sua conta na OCI:
+1. Navegue pelo menu da Console ate o servico de functions: **Menu** > **Developer Service** > **Functions**
+2. Altere o compartimento, se necessário, para visualizar suas *Applications*.
+3. Clique no nome da **Application**, no nosso exemplo, "App Sample 001".
+4. De dentro da *Application* selecionada, mude para a tab de nome "**functions**".
+5. Na linha da function que deseja exporta seus arquivos, no nosso exemplo: "**oci-object-storage-copy-objects**", selecione a URL da image e copie o path completo. 
 
-<img src="images/oci-function-menu-developer-service.jpg" alt="Menu: Developer Service" width="70%" height="70%"/>
-
-Altere o compartimento, se necessário, para visualizar sua aplicação e clique no nome dela.
-
-<img src="images/oci-function-developer-service-applications.jpg" alt="Developer Service: Applications" width="70%" height="70%"/>
-
-Na aba "**Functions**", localize a função desejada e copie a URL completa da imagem, disponível na coluna **Image**.
-
-<img src="images/oci-function-developer-service-functions.jpg" alt="Developer Service: Functions" width="70%" height="70%"/>
+<img src="images/oci-function-copy-image-url.gif" alt="Developer Service: Functions - Copy image URL" width="100%" height="100%"/>
 
 ## Command line
 
 ### Applications:
 
-Primeiramente, é necessário obter o OCID da aplicação da função.
+Primeito, é necessário obter o OCID da aplicação da função.
 
 ```BASH
 oci fn application list \
@@ -126,23 +120,27 @@ oci fn application list \
 --compartment-id ocid1.compartment.oc1..aaaaaaaag______i6o4
 ```
 
-**EXEMPLO**
+**OUTPUT EXAMPLE**
 ```JSON
 [
   {
     "Id": "ocid1.fnapp.oc1.iad.aaaaaaaah______i6o4",
-    "Name": "fn app sample 001"
+    "Name": "App Sample 001"
   },
   {
     "Id": "ocid1.fnapp.oc1.iad.aaaaaaaaz______i6o4",
-    "Name": "fn app sample 001"
+    "Name": "App Sample 002"
+  },
+  {
+    "Id": "ocid1.fnapp.oc1.iad.aaaaaaaaz______i6o4",
+    "Name": "App Sample 003"
   }
 ]
 ```
 
 ### Functions
 
-Para listar as funções de uma aplicação, utilize o comando a seguir.
+Para listar as "**functions**" de uma "**Applications**", utilize o comando a seguir.
 
 ```BASH
 oci fn function list \
@@ -154,20 +152,24 @@ oci fn function list \
 ```JSON
 [
   {
-    "Name": "fn sample 001",
-    "image": "<region>.ocir.io/<os-namespace>/bucket/<repo>/<image>:<tag-ver>"
+    "Name": "fn-sample-001",
+    "image": "gru.ocir.io/dri1g6o0r4ft/bucket/sample/sample-001:latest"
   },
   {
-    "Name": "fn sample 002",
-    "image": "<region>.ocir.io/<os-namespace>/bucket/<repo>/<image>:<tag-ver>"
+    "Name": "fn-sample-002",
+    "image": "gru.ocir.io/dri1g6o0r4ft/bucket/sample/sample-002:v1.0"
+  },
+  {
+    "Name": "fn-sample-003",
+    "image": "gru.ocir.io/dri1g6o0r4ft/bucket/sample/sample-003:v1"
   }
 ]
 ```
 
-Na lista exibida, localize a função correta e copie o endereço da imagem. Utilize essa informação para exportar uma variável de ambiente, conforme o exemplo abaixo:
+Na lista exibida, localize a função que deseja exporta os arquivos e copie o endereço da **image**. Utilize essa informação para exportar uma variável de ambiente, conforme o exemplo abaixo:
 
 ```BASH
-export IMAGE_URL="<region>.ocir.io/<os-namespace>/bucket/<repo>/<image>:<tag-ver>"
+export IMAGE_URL="gru.ocir.io/dri1g6o0r4ft/bucket/sample/sample-001:latest"
 ```
 
 Em seguida, execute os comandos abaixo para separar os valores necessários para os próximos passos:
@@ -182,8 +184,8 @@ set | grep -E '^OCI_(NAMESPACE|REGION)'
 **OUTPUT EXAMPLE**
 
 ```BASH
-OCI_NAMESPACE=<os-namespace>
-OCI_REGION=<region>
+OCI_NAMESPACE=dri1g6o0r4ft
+OCI_REGION=gru
 ```
 
 # Docker
@@ -193,20 +195,20 @@ OCI_REGION=<region>
 Para efetuar o login no OCI Registry utilizando o Docker, execute o seguinte comando:
 
 ```
-docker login -u "${OCI_NAMESPACE}/<Identity-Domain-Name>/<Username>" ${OCI_REGION}.ocir.io
+docker login -u "${OCI_NAMESPACE}/<Identity-Domain>/<Username>" ${OCI_REGION}.ocir.io
 ```
 
 |Campo / Chave|Descricao|
 |-------------|---------|
-|Identity-Domain-Name|O nome do domínio onde o usuário foi criado.|
-|Username|O nome do usuário que será utilizado.|
+|Identity-Domain|O nome do domínio onde o usuário foi criado/existe.|
+|Username|O nome de usuário (*username*) que será utilizado.|
 |${OCI_NAMESPACE}|Variável exportada com base nas informações da **URL** da **IMAGE** da **FUNCTION**|
 |${OCI_REGION}|Variável exportada com base nas informações da **URL** da **IMAGE** da **FUNCTION**|
 
 **OUTPUT EXAMPLE**
 
 ```BASH
-docker login -u "${OCI_NAMESPACE}/OracleIdentityCloudService/user.name@domain.mail" ${OCI_REGION}.ocir.io
+docker login -u "${OCI_NAMESPACE}/OracleIdentityCloudService/user1.name@domain.mail" ${OCI_REGION}.ocir.io
 Password: 
 
 WARNING! Your credentials are stored unencrypted in '/home/username/.docker/config.json'.
@@ -218,7 +220,7 @@ Login Succeeded
 
 ## Download
 
-Após efetuar o login com sucesso no OCI Registry, inicie o download da imagem com este comando, utilizando a variável de ambiente criada anteriormente com a URL da imagem da *function* no *registry*.
+Após efetuar o login com sucesso no *OCI Registry*, inicie o *download* da *image* com o comando abaixo, utilizando a variável de ambiente criada anteriormente com a URL da imagem da *function* no *registry*.
 
 ```
 docker image pull ${IMAGE_URL}
@@ -227,27 +229,25 @@ docker image list
 
 **OUTPUT EXAMPLE**
 ```BASH
-<region>.ocir.io/<os-namespace>/bucket/<repo>/<image>:<tag-ver>
-
 $ docker image pull ${IMAGE_URL}
-<tag-ver>: Pulling from <region>.ocir.io/<os-namespace>/bucket/<repo>/<image>
+latest: Pulling from gru.ocir.io/dri1g6o0r4ft/bucket/sample/sample-001
 93388424bfae: Pull complete 
 697162a034af: Pull complete 
 0e7d7ab6398b: Pull complete 
 74362c75fc41: Pull complete 
 19426804af7a: Pull complete 
-Digest: sha256:3bfcc27153a98d1e3edbca14618d69be014869b290461067f1ae6514f7536a2f
-Status: Downloaded newer image for <region>.ocir.io/<os-namespace>/bucket/<repo>/<image>:<tag-ver>
-<region>.ocir.io/<os-namespace>/bucket/<repo>/<image>:<tag-ver>
+Digest: sha256:3bfcc27153a98d1e3edbca14618d69be014869b290461067f1ae6514f7531604
+Status: Downloaded newer image for gru.ocir.io/dri1g6o0r4ft/bucket/sample/sample-001:latest
+gru.ocir.io/dri1g6o0r4ft/bucket/sample/sample-001:latest
 
 $ docker image list
-REPOSITORY                                                                     TAG         IMAGE ID       CREATED       SIZE
-<region>.ocir.io/<os-namespace>/bucket/<repo>/<image>   <tag-ver>   bce6ea890836   2 weeks ago   1604MB
+REPOSITORY                                          TAG      IMAGE ID       CREATED       SIZE
+gru.ocir.io/dri1g6o0r4ft/bucket/sample/sample-001   latest   bce6ea8901604   2 weeks ago   1604MB
 ```
 
-## Copy
+## File Export
 
-Agora, crie um **container** para a imagem que foi baixada do OCI Registry.
+Agora, crie um **container** para a imagem que voce fez download do *OCI Registry*.
 
 ```
 docker create \
@@ -260,11 +260,11 @@ docker container list --latest
 ```BASH
 $ docker create --name \
 container_name ${IMAGE_URL}
-73845a91e6c0a7c83225898c9e0799c4a524830146eb582cb973eba742ed6a13
+73845a91e6c0a7c83225898c9e0799c4a124830146eb582cb973eba742ed1604
 
 $ docker container list --latest
-CONTAINER ID IMAGE                                                            COMMAND                 CREATED     STATUS  PORTS  NAMES
-73845a91e6c0 <region>.ocir.io/<os-namespace>/bucket/<repo>/<image>:<tag-ver>  "/python/bin/fdk /fu…"  3 secs ago  Created -      container_name
+CONTAINER ID IMAGE                                                     COMMAND                 CREATED     STATUS  PORTS  NAMES
+73845a91e6c0 gru.ocir.io/dri1g6o0r4ft/bucket/sample/sample-001:latest  "/python/bin/fdk /fu…"  3 secs ago  Created -      container_name
 
 ```
 
@@ -281,7 +281,7 @@ cd ${output_dir} && ls -lh
 ```BASH
 $ output_dir=$(mktemp -d) && \
 docker cp container_name:/function ${output_dir}
-Successfully copied 8.19kB to /tmp/tmp.8lpBjo1EvB
+Successfully copied 8.19kB to /tmp/tmp.8lpBjo1604
 
 $ cd ${output_dir}/function && ls -lh
 total 16
@@ -291,7 +291,7 @@ total 16
 -rw-r--r-- 1 user group    7 may 18 16:04 requirements.txt
 ```
 
-Estes são os arquivos utilizados para o build da function, que se baseava esta imagem:
+Estes são os arquivos utilizados para o *build* da *function*, quando essa *image* do *OCI Function* foi criada.
 
 |Arquivo|Descricao|
 |-------------|---------|
@@ -299,14 +299,16 @@ Estes são os arquivos utilizados para o build da function, que se baseava esta 
 |func.yaml|As configurações da função, como: nome, versão, memória, etc.|
 |requirements.txt|Os nomes dos módulos de dependências do Python para a execução do func.py.|
 
-## Remover a imagem local do docker
+## Limpeza do ambiente
 
-Para remover a imagem local do Docker, utilize os comandos abaixo.
+Para apagar a imagem local do Docker e remover as variaveis de ambiente criadas, utilize os comandos abaixo.
 
 ```BASH
 docker container rm <container-name>
 docker image rm <image-id>
 docker image prune
+
+unset IMAGE_URL OCI_REGION OCI_NAMESPACE
 ```
 
 **OUTPUT EXAMPLE**
@@ -314,18 +316,20 @@ docker image prune
 $ docker container rm container_name
 container_name
 
-$ docker image rm bce6ea890836
-Untagged: iad.ocir.io/idi1o0a010nx/bucket/par-generate/oci-objectstorage-create-par-python:0.0.8
-Untagged: iad.ocir.io/idi1o0a010nx/bucket/par-generate/oci-objectstorage-create-par-python@sha256:3bfcc27153a98d1e3edbca14618d69be014869b290461067f1ae6514f7536a2f
-Deleted: sha256:bce6ea8908367b1d97a67ea79e8f353e5c3adf5a8c372a8e82eb3c2bb839547d
-Deleted: sha256:5ccb2d5e13202b8da1088b70d891af640648ad06b719afc4fb7d458519a70bbd
-Deleted: sha256:2b94a8fc9eef1a7f9debc2f1be2af9c6893cbcb84e8e75a51e6e35b95071b6cd
-Deleted: sha256:19aef3be42a4384badd8739d4ca5ef938446a4fa989a0ee4ea3a6c7782f0247d
-Deleted: sha256:e31e7194daf08d7c7086361797efce3ee0ce9a43e582e6f374c0579dbb86610d
-Deleted: sha256:1dcf70a42af27444198edc1807d39ea17992a3b04dab38e3ea3f6fd9647cf853
+$ docker image rm bce6ea8901604
+Untagged: gru.ocir.io/dri1g6o0r4ft/bucket/sample/sample-001:latest
+Untagged: gru.ocir.io/dri1g6o0r4ft/bucket/sample/sample-001@sha256:3bfcc27153a98d1e3edbca14618d69be014869b290461037f1ae6514f7531604
+Deleted: sha256:bce6ea8901604b1d97a67ea79e8f353e5c3adf5a8c372a8e22eb3c2bb8391604
+Deleted: sha256:5ccb2d5e13202b8da1088b70d891af640648ad06b715afc4fb7d458519a71604
+Deleted: sha256:2b94a8fc9eef1a7f9debc2f1be2af9c6893cbcb86e8e75a51e6e35b950711604
+Deleted: sha256:19aef3be42a4384badd8739d4ca5ef938446a7fa989a0ee4ea3a6c7782f01604
+Deleted: sha256:e31e7194daf08d7c7086361797efce3ee0ce8a43e582e6f374c0579dbb861604
+Deleted: sha256:1dcf70a42af27444198edc1807d39ea17992a3b09dab38e3ea3f6fd9647c1604
 
 $ docker image prune
 WARNING! This will remove all dangling images.
 Are you sure you want to continue? [y/N] y
 Total reclaimed space: 1604MB
+
+unset IMAGE_URL OCI_REGION OCI_NAMESPACE
 ```
